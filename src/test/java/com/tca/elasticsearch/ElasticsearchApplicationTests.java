@@ -3,12 +3,18 @@ package com.tca.elasticsearch;
 import com.tca.elasticsearch.entity.Item;
 import com.tca.elasticsearch.repository.ItemRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.search.sort.SortBuilders;
+import org.elasticsearch.search.sort.SortOrder;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.util.ArrayList;
@@ -50,13 +56,14 @@ public class ElasticsearchApplicationTests {
 	 */
 	@Test
 	public void insertDocument() {
-		Item item = Item.builder().id(1L)
+		Item item = Item.builder().id(5L)
 				.category("武侠")
 				.brand("三联")
 				.images("hello")
-				.price(38.88D)
-				.title("神雕侠侣").build();
-		itemRepository.save(item);
+				.price(48.88D)
+				.title("黯然销魂掌").build();
+		Item index = itemRepository.save(item);
+		log.info("index = {}", index.toString());
 		log.info("插入document成功!");
 	}
 
@@ -120,6 +127,48 @@ public class ElasticsearchApplicationTests {
 	public void queryDocument_2() {
 		List<Item> items = itemRepository.findByPriceBetween(0D, 30D);
 		items.forEach(item -> System.out.println(item));
+	}
+
+	/**
+	 * 自定义查询 - 1
+	 */
+	@Test
+	public void queryDocument_1_self() {
+		// 构建查询条件
+		NativeSearchQueryBuilder nativeSearchQueryBuilder = new NativeSearchQueryBuilder();
+		// 添加搜索条件
+		nativeSearchQueryBuilder.withQuery(QueryBuilders.matchQuery("title", "九阴真经"));
+		// 搜索
+		Page<Item> items = itemRepository.search(nativeSearchQueryBuilder.build());
+		log.info("总条数: {}", items.getTotalElements());
+		items.forEach(item -> System.out.println(item));
+	}
+
+	/**
+	 * 自定义查询 - 2
+	 */
+	@Test
+	public void queryDocument_2_self() {
+		NativeSearchQueryBuilder nativeSearchQueryBuilder = new NativeSearchQueryBuilder();
+		nativeSearchQueryBuilder.withQuery(QueryBuilders.matchQuery("brand", "三联"));
+		nativeSearchQueryBuilder.withSort(SortBuilders.fieldSort("price").order(SortOrder.ASC));
+		Page<Item> items = itemRepository.search(nativeSearchQueryBuilder.build());
+		items.forEach(item -> System.out.println(item));
+	}
+
+	@Test
+	public void queryDocument_1_page() {
+		// 分页
+		int page = 0, size = 2;
+		// 构建查询条件
+		NativeSearchQueryBuilder nativeSearchQueryBuilder = new NativeSearchQueryBuilder();
+		// 添加搜索条件
+		nativeSearchQueryBuilder.withQuery(QueryBuilders.matchQuery("brand", "三联"));
+		// 构建分页条件
+		nativeSearchQueryBuilder.withPageable(PageRequest.of(page, size));
+		// 搜索
+		Page<Item> items = itemRepository.search(nativeSearchQueryBuilder.build());
+		log.info("items = {}", items.getTotalElements());
 	}
 
 
